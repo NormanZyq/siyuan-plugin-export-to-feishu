@@ -1,22 +1,101 @@
-.plugin-sample {
-  &__custom-tab {
-    background-color: var(--b3-theme-background);
-    height: 100%;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  &__custom-dock {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  &__time {
-    background: var(--b3-card-info-background);
+/* 飞书文件夹选择器样式 */
+.feishu-export-info {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: var(--b3-theme-surface);
     border-radius: 4px;
-    padding: 2px 8px;
-  }
+    font-size: 14px;
+    color: var(--b3-theme-on-surface);
+
+    strong {
+        color: var(--b3-theme-primary);
+    }
+}
+
+.feishu-folder-tree {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--b3-border-color);
+    border-radius: 4px;
+    background: var(--b3-theme-background);
+}
+
+.feishu-folder-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: var(--b3-list-hover);
+    }
+
+    &--selected {
+        background: var(--b3-theme-primary-lightest);
+
+        &:hover {
+            background: var(--b3-theme-primary-lightest);
+        }
+    }
+}
+
+.feishu-folder-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 4px;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--b3-list-hover);
+        border-radius: 4px;
+    }
+}
+
+.feishu-folder-arrow {
+    width: 12px;
+    height: 12px;
+    color: var(--b3-theme-on-surface);
+    transition: transform 0.15s ease;
+
+    &--expanded {
+        transform: rotate(90deg);
+    }
+}
+
+.feishu-folder-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    color: var(--b3-theme-primary);
+}
+
+.feishu-folder-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--b3-theme-on-background);
+}
+
+.feishu-folder-children {
+    /* 子文件夹容器 */
+}
+
+/* 加载动画 */
+.fn__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+
+    img {
+        width: 32px;
+        height: 32px;
+    }
 }
