@@ -2,7 +2,7 @@
 
 # Export to Feishu
 
-A SiYuan Note plugin that exports documents to Feishu (Lark) Docs.
+A SiYuan Note plugin that exports documents to Feishu (Lark) Docs. **Vibe coded by Claude Code**
 
 ## Features
 
@@ -15,11 +15,8 @@ A SiYuan Note plugin that exports documents to Feishu (Lark) Docs.
 
 ## Installation
 
-### From Marketplace
+### ~~From Marketplace~~
 
-1. Open SiYuan → Settings → Marketplace → Plugins
-2. Search for "Export to Feishu"
-3. Click Install
 
 ### Manual Installation
 
