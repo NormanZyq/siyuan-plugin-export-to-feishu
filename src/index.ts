@@ -8,6 +8,7 @@ import {
 import "./index.scss";
 
 const STORAGE_NAME = "feishu-config";
+const FEISHU_DOC_TOKEN_ATTR = "custom-feishu-doc-token";
 
 interface FeishuConfig {
     tenantToken: string;
@@ -34,6 +35,7 @@ export default class ExportToFeishuPlugin extends Plugin {
         lastTargetFolderName: "",
     };
     private exportRecords: Map<string, ExportRecord> = new Map();
+    private isExporting: boolean = false;
 
     async onload() {
         // 加载配置
@@ -139,6 +141,12 @@ export default class ExportToFeishuPlugin extends Plugin {
     }
 
     private async handleExport() {
+        // 检查是否有正在进行的导出任务
+        if (this.isExporting) {
+            showMessage(this.i18n.exportInProgress, 3000, "error");
+            return;
+        }
+
         // 检查配置
         if (!this.config.tenantToken) {
             showMessage(this.i18n.tokenRequired, 3000, "error");
@@ -169,6 +177,15 @@ export default class ExportToFeishuPlugin extends Plugin {
             return;
         }
 
+        // 检查是否曾经导出过
+        const attrs = await this.getBlockAttrs(rootId);
+        if (attrs && attrs[FEISHU_DOC_TOKEN_ATTR]) {
+            const shouldContinue = await this.showAlreadyExportedConfirmation();
+            if (!shouldContinue) {
+                return;
+            }
+        }
+
         // 获取文档内容（先获取标题用于显示）
         const exportResult = await this.exportMarkdown(rootId);
         if (!exportResult) {
@@ -190,6 +207,7 @@ export default class ExportToFeishuPlugin extends Plugin {
         await this.saveData(STORAGE_NAME, this.config);
 
         // 开始导出流程
+        this.isExporting = true;
         try {
             // 上传到临时文件夹
             showMessage(this.i18n.uploading, 0, "info", "export-progress");
@@ -215,7 +233,7 @@ export default class ExportToFeishuPlugin extends Plugin {
             // 删除临时文件
             await this.deleteFile(fileToken);
 
-            if (importResult) {
+            if (importResult.success) {
                 // 保存导出记录
                 this.exportRecords.set(rootId, {
                     siyuanId: rootId,
@@ -225,13 +243,44 @@ export default class ExportToFeishuPlugin extends Plugin {
                     exportTime: Date.now(),
                 });
 
-                showMessage(this.i18n.exportSuccess.replace("${title}", title), 5000, "info", "export-progress");
+                // 将飞书文档 token 保存到思源笔记的属性中
+                if (importResult.token) {
+                    await this.setBlockAttrs(rootId, {
+                        [FEISHU_DOC_TOKEN_ATTR]: importResult.token,
+                    });
+                }
+
+                // 检查是否有警告信息
+                if (importResult.extra) {
+                    // 将非数字的元素剔除，非数字的返回内容的含义没有在官方文档里面查到
+                    importResult.extra = importResult.extra.filter(code => /^\d+$/.test(code));
+                    if (importResult.extra.length > 0) {
+                        const warnings = importResult.extra.map(code => this.getExtraErrorMessage(code)).join("\n");
+                        showMessage(
+                            `${this.i18n.exportSuccess.replace("${title}", title)}\n\n${this.i18n.conversionWarning}\n${warnings}`,
+                            10000,
+                            "info",
+                            "export-progress"
+                        );
+                    } else {
+                        showMessage(this.i18n.exportSuccess.replace("${title}", title), 5000, "info", "export-progress");
+                    }
+                }
+            } else if (importResult.timeout) {
+                showMessage(this.i18n.conversionTimeout, 5000, "error", "export-progress");
             } else {
-                showMessage(this.i18n.importFailed, 3000, "error", "export-progress");
+                showMessage(
+                    this.i18n.conversionError.replace("${msg}", importResult.errorMsg || "Unknown error"),
+                    5000,
+                    "error",
+                    "export-progress"
+                );
             }
         } catch (error) {
             console.error("Export to Feishu failed:", error);
             showMessage(this.i18n.exportError + ": " + error.message, 5000, "error", "export-progress");
+        } finally {
+            this.isExporting = false;
         }
     }
 
@@ -374,7 +423,7 @@ export default class ExportToFeishuPlugin extends Plugin {
         }
     }
 
-    private async getImportTaskStatus(ticket: string): Promise<{ status: number; token?: string } | null> {
+    private async getImportTaskStatus(ticket: string): Promise<{ status: number; token?: string; errorMsg?: string; extra?: string[] } | null> {
         try {
             const response = await fetch(`https://open.feishu.cn/open-apis/drive/v1/import_tasks/${ticket}`, {
                 method: "GET",
@@ -388,6 +437,8 @@ export default class ExportToFeishuPlugin extends Plugin {
                 return {
                     status: result.data.result.job_status,
                     token: result.data.result.token,
+                    errorMsg: result.data.result.job_error_msg,
+                    extra: result.data.result.extra,
                 };
             }
             return null;
@@ -397,24 +448,61 @@ export default class ExportToFeishuPlugin extends Plugin {
         }
     }
 
-    private async waitForImportComplete(ticket: string, maxRetries: number = 30): Promise<{ token: string } | null> {
+    private async waitForImportComplete(ticket: string): Promise<{
+        success: boolean;
+        token?: string;
+        errorMsg?: string;
+        extra?: string[];
+        timeout?: boolean;
+    }> {
+        const maxRetries = 5;
+        const retryInterval = 2000; // 2秒
+
         for (let i = 0; i < maxRetries; i++) {
             const status = await this.getImportTaskStatus(ticket);
             if (!status) {
-                return null;
+                return { success: false, errorMsg: "Failed to get import status" };
             }
 
-            // job_status: 0 - 初始化, 1 - 处理中, 2 - 成功, 3 - 失败
-            if (status.status === 2) {
-                return { token: status.token || "" };
-            } else if (status.status === 3) {
-                return null;
+            // job_status: 0 - 成功, 1 - 初始化, 2 - 处理中, >=3 - 错误
+            if (status.status === 0) {
+                // 成功
+                return {
+                    success: true,
+                    token: status.token || "",
+                    extra: status.extra
+                };
+            } else if (status.status >= 3) {
+                // 错误
+                return {
+                    success: false,
+                    errorMsg: status.errorMsg || "Unknown error"
+                };
             }
 
-            // 等待 1 秒后重试
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // status.status === 1 或 2，继续轮询
+            // 等待 2 秒后重试
+            await new Promise(resolve => setTimeout(resolve, retryInterval));
         }
-        return null;
+
+        // 超时
+        return { success: false, timeout: true };
+    }
+
+    private getExtraErrorMessage(code: string): string {
+        const errorMap: Record<string, string> = {
+            "1000": this.i18n.extraError1000,
+            "1001": this.i18n.extraError1001,
+            "1002": this.i18n.extraError1002,
+            "1003": this.i18n.extraError1003,
+            "1005": this.i18n.extraError1005,
+            "2000": this.i18n.extraError2000,
+            "2001": this.i18n.extraError2001,
+            "2002": this.i18n.extraError2002,
+            "2003": this.i18n.extraError2003,
+            "2004": this.i18n.extraError2004,
+        };
+        return errorMap[code] || `Unknown warning code: ${code}`;
     }
 
     private async deleteFile(fileToken: string): Promise<boolean> {
@@ -432,6 +520,56 @@ export default class ExportToFeishuPlugin extends Plugin {
             console.error("Delete file error:", error);
             return false;
         }
+    }
+
+    private async getBlockAttrs(blockId: string): Promise<Record<string, string> | null> {
+        return new Promise((resolve) => {
+            fetchPost("/api/attr/getBlockAttrs", { id: blockId }, (response) => {
+                if (response.code === 0 && response.data) {
+                    resolve(response.data);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    private async setBlockAttrs(blockId: string, attrs: Record<string, string>): Promise<boolean> {
+        return new Promise((resolve) => {
+            fetchPost("/api/attr/setBlockAttrs", { id: blockId, attrs }, (response) => {
+                resolve(response.code === 0);
+            });
+        });
+    }
+
+    private async showAlreadyExportedConfirmation(): Promise<boolean> {
+        return new Promise((resolve) => {
+            const dialog = new Dialog({
+                title: this.i18n.alreadyExported,
+                content: `<div class="b3-dialog__content">
+                    <div class="feishu-export-warning">${this.i18n.alreadyExportedDesc}</div>
+                </div>
+                <div class="b3-dialog__action">
+                    <button class="b3-button b3-button--cancel">${this.i18n.cancel}</button>
+                    <div class="fn__space"></div>
+                    <button class="b3-button b3-button--text" id="confirmExportBtn">${this.i18n.continueExport}</button>
+                </div>`,
+                width: "400px",
+            });
+
+            const confirmBtn = dialog.element.querySelector("#confirmExportBtn") as HTMLButtonElement;
+            const cancelBtn = dialog.element.querySelector(".b3-button--cancel") as HTMLButtonElement;
+
+            cancelBtn.addEventListener("click", () => {
+                dialog.destroy();
+                resolve(false);
+            });
+
+            confirmBtn.addEventListener("click", () => {
+                dialog.destroy();
+                resolve(true);
+            });
+        });
     }
 
     private async showFolderSelector(onSelect: (token: string, name: string) => void) {
