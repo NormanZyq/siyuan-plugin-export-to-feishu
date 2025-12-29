@@ -18,7 +18,7 @@
   "extraError2003": "Cloud storage insufficient, please contact admin",
   "extraError2004": "Some table images failed to upload",
   "tenantToken": "Feishu Access Token",
-  "tokenDescription": "Supports tenant_access_token (app identity) or user_access_token (user identity)",
+  "tokenDescription": "Visit <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API Explorer</a> to quickly get a temporary user_access_token (valid for ~2 hours). No need to add Bearer prefix when pasting.",
   "tokenPlaceholder": "Enter access_token",
   "tokenRequired": "Please configure Feishu Token first",
   "tempFolder": "Temporary Upload Folder",

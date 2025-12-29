@@ -18,7 +18,7 @@
   "extraError2003": "云空间存储不足，请联系管理员",
   "extraError2004": "部分表格图片上传失败",
   "tenantToken": "飞书 Access Token",
-  "tokenDescription": "支持 tenant_access_token（应用身份）或 user_access_token（用户身份）",
+  "tokenDescription": "访问 <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API 调试台</a> 快速获取一个临时的 user_access_token，有效期约 2 小时。粘贴时无需添加 Bearer 前缀。",
   "tokenPlaceholder": "请输入 access_token",
   "tokenRequired": "请先配置飞书 Token",
   "tempFolder": "临时文件上传目录",

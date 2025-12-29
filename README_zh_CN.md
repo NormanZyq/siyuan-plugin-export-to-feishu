@@ -1,164 +1,145 @@
-[English](https://github.com/siyuan-note/plugin-sample/blob/main/README.md)
+[English](README.md)
 
-# 思源笔记插件示例
+# 导出到飞书
 
-## 开始
+一个将思源笔记文档导出到飞书文档的插件。
 
-* 通过 <kbd>Use this template</kbd> 按钮将该库文件复制到你自己的库中，请注意库名必须和插件名称一致，默认分支必须为 `main`
-* 将你的库克隆到本地开发文件夹中，为了方便可以直接将开发文件夹放置在 `{工作空间}/data/plugins/` 下
-* 安装 [NodeJS](https://nodejs.org/en/download) 和 [pnpm](https://pnpm.io/installation)，然后在开发文件夹下执行 `pnpm i`
-* 执行 `pnpm run dev` 进行实时编译
-* 在思源中打开集市并在下载选项卡中启用插件
+## 功能特性
 
-## 开发
+- **一键导出**：通过顶栏按钮或快捷键，一键将当前文档导出到飞书文档
+- **文件夹选择**：每次导出时可选择飞书云空间中的目标文件夹
+- **导出历史追踪**：自动在文档属性中记录导出历史
+- **重复导出检测**：导出已导出过的文档时会弹出确认提示
+- **转换状态反馈**：实时显示上传和转换进度
+- **错误处理**：显示来自飞书 API 的详细错误信息和警告
 
-* i18n/*
-* icon.png (160*160)
-* index.css
-* index.js
-* plugin.json
-* preview.png (1024*768)
-* README*.md
-* [前端 API](https://github.com/siyuan-note/petal)
-* [后端 API](https://github.com/siyuan-note/siyuan/blob/master/API_zh_CN.md)
+## 安装
 
-## 国际化
+### 从集市安装
 
-国际化方面我们主要考虑的是支持多语言，具体需要完成以下工作：
+1. 打开思源笔记 → 设置 → 集市 → 插件
+2. 搜索「导出到飞书」
+3. 点击安装
 
-* 插件自身的元信息，比如插件描述和自述文件
-  * plugin.json 中的 `displayName`、`description` 和 `readme` 字段，以及对应的 README*.md 文件
-* 插件中使用的文本，比如按钮文字和提示信息
-  * src/i18n/*.json 语言配置文件
-  * 代码中使用 `this.i18.key` 获取文本
+### 手动安装
 
-建议插件至少支持英文和简体中文，这样可以方便更多人使用。不支持的语种不需要在 plugin.json 中的 `displayName`、`description` 和 `readme` 字段中声明。
+1. 从 [Releases](https://github.com/yourusername/export-to-feishu/releases) 下载 `package.zip`
+2. 解压到 `{思源工作空间}/data/plugins/export-to-feishu/`
+3. 重启思源或重新加载插件
 
-## plugin.json
+## 配置
 
-一个典型的示例如下：
+使用插件前，需要配置飞书 API 访问权限：
 
-```json
-{
-  "name": "plugin-sample",
-  "author": "Vanessa",
-  "url": "https://github.com/siyuan-note/plugin-sample",
-  "version": "0.4.2",
-  "minAppVersion": "3.3.0",
-  "backends": ["all"],
-  "frontends": ["all"],
-  "disabledInPublish": false,
-  "displayName": {
-    "default": "Plugin Sample",
-    "zh_CN": "插件示例"
-  },
-  "description": {
-    "default": "This is a plugin development sample",
-    "zh_CN": "这是一个插件开发示例"
-  },
-  "readme": {
-    "default": "README.md",
-    "zh_CN": "README_zh_CN.md"
-  },
-  "funding": {
-    "custom": ["https://ld246.com/sponsor"]
-  },
-  "keywords": [
-    "开发者参考",
-    "developer reference",
-    "示例插件"
-  ]
-}
+### 1. 获取飞书 Access Token
+
+你需要从飞书开放平台获取 `tenant_access_token` 或 `user_access_token`：
+
+#### 适合普通用户的方法
+
+1. 访问 [API 调试台](https://open.feishu.cn/api-explorer/) 
+2. 点击获取Token
+3. 登录飞书授权
+4. 将获取到的`user_access_token` 复制
+5. 完事
+
+#### 正规方法
+WIP
+
+流程大致是：创建自己的app，设置需要的权限，通过id和secret获取授权码，进一步的获取token，太麻烦了，不建议普通用户使用
+
+
+
+### 2. 配置插件
+
+1. 打开思源笔记 → 设置 → 插件 → 导出到飞书
+2. 输入飞书 Access Token
+3. 点击「选择」按钮选择临时文件上传目录
+   - 该目录用于转换过程中临时存放 Markdown 文件
+   - 转换成功后文件会自动删除
+
+## 使用方法
+
+### 导出文档
+
+1. 在思源笔记中打开要导出的文档
+2. 点击顶栏的飞书图标，或使用快捷键：
+   - macOS: `Shift + Cmd + F`
+   - Windows/Linux: `Shift + Ctrl + F`
+3. 在弹窗中选择飞书云空间的目标文件夹
+4. 点击「确定导出」开始导出
+
+### 导出流程
+
+```
+思源文档 → Markdown → 上传到飞书 → 转换为飞书文档 → 清理临时文件
 ```
 
-* `name`：插件包名，必须和 GitHub 仓库名一致，且不能与集市中的其他插件重复
-* `author`：插件作者名
-* `url`：插件仓库地址
-* `version`：插件版本号，需要遵循 [semver](https://semver.org/lang/zh-CN/) 规范
-* `minAppVersion`：插件支持的最低思源笔记版本号
-* `disabledInPublish`：使用发布服务时是否禁用该插件，默认为 false，即不禁用
-* `backends`：插件需要的后端环境，可选值为 `windows`, `linux`, `darwin`, `docker`, `android`, `ios`, `harmony` 和 `all`
-  * `windows`：Windows 桌面端
-  * `linux`：Linux 桌面端
-  * `darwin`：macOS 桌面端
-  * `docker`：Docker 端
-  * `android`：Android 端
-  * `ios`：iOS 端
-  * `harmony`：鸿蒙端
-  * `all`：所有环境
-* `frontends`：插件需要的前端环境，可选值为 `desktop`, `desktop-window`, `mobile`, `browser-desktop`, `browser-mobile` 和 `all`
-  * `desktop`：桌面端
-  * `desktop-window`：桌面端页签转换的独立窗口
-  * `mobile`：移动端
-  * `browser-desktop`：桌面端浏览器
-  * `browser-mobile`：移动端浏览器
-  * `all`：所有环境
-* `displayName`：插件名称，在插件集市列表中显示
-  * `default`：默认语言，必须存在。如果插件支持英文，此处应使用英文
-  * `zh_CN`、`en_US` 等其他语言：可选
-* `description`：插件描述，在插件集市列表中显示
-  * `default`：默认语言，必须存在。如果插件支持英文，此处应使用英文
-  * `zh_CN`、`en_US` 等其他语言：可选
-* `readme`：自述文件名，在插件集市详情页中显示
-  * `default`：默认语言，必须存在。如果插件支持英文，此处应使用英文
-  * `zh_CN`、`en_US` 等其他语言：可选
-* `funding`：插件赞助信息，集市仅显示其中一种
-  * `openCollective`：Open Collective 名称
-  * `patreon`：Patreon 名称
-  * `github`：GitHub 登录名
-  * `custom`：自定义赞助链接列表
-* `keywords`：搜索关键字列表，用于集市搜索功能，补充 `name`、`author`、`displayName`、`description` 字段值以外的搜索关键词
+1. 通过思源 API 将文档导出为 Markdown
+2. 将 Markdown 文件上传到飞书云空间的临时目录
+3. 飞书将 Markdown 转换为飞书文档，保存到你选择的目标文件夹
+4. 自动删除临时文件
+5. 将飞书文档 token 保存到思源文档的属性中
 
-## 打包
+### 重复导出
 
-无论使用何种方式编译打包，我们最终需要生成一个 package.zip，它至少包含如下文件：
+当导出一个之前已经导出过的文档时：
+- 会弹出确认对话框
+- 选择继续将会创建一个**新的**飞书文档（不会影响已有的文档）
 
-* i18n/* (如果插件支持多语言，则需要将语言文件打包到该目录下，否则不需要该目录)
-* icon.png (建议尺寸为 160*160、文件大小不超过 20KB)
-* index.css
-* index.js
-* plugin.json
-* preview.png (建议尺寸为 1024*768、文件大小不超过 200KB)
-* README*.md
+## 从源码构建
 
-## 上架集市
+### 环境要求
 
-* 执行 `pnpm run build` 生成 package.zip
-* 在 GitHub 上创建一个新的发布，使用插件版本号作为 “Tag version”，示例 https://github.com/siyuan-note/plugin-sample/releases
-* 上传 package.zip 作为二进制附件
-* 提交发布
+- [Node.js](https://nodejs.org/) (v16+)
+- [pnpm](https://pnpm.io/)
 
-如果是第一次发布版本，还需要创建一个 PR 到 [Community Bazaar](https://github.com/siyuan-note/bazaar) 社区集市仓库，修改该库的 plugins.json。该文件是所有社区插件库的索引，格式为：
+### 命令
 
-```json
-{
-  "repos": [
-    "username/reponame"
-  ]
-}
+```bash
+# 安装依赖
+pnpm install
+
+# 开发构建（监听模式）
+pnpm run dev
+
+# 生产构建（生成 package.zip）
+pnpm run build
+
+# 代码检查
+pnpm run lint
 ```
 
-PR 被合并以后集市会通过 GitHub Actions 自动更新索引并部署。后续发布新版本插件时只需要按照上述步骤创建新的发布即可，不需要再 PR 社区集市仓库。
+开发时，将项目文件夹放置在 `{思源工作空间}/data/plugins/export-to-feishu/` 下可实现热重载。
 
-正常情况下，社区集市仓库每隔 1 小时会自动更新索引并部署，可在 https://github.com/siyuan-note/bazaar/actions 查看部署状态。
+## 限制
 
-## 开发者须知
+- 文档中的图片以 Markdown 图片链接形式导出
+- 部分复杂的 Markdown 格式可能无法完美转换为飞书格式
+- 飞书有内容限制：
+  - 最多 20,000 个内容块
+  - 最多 2,000 个表格单元格
+  - 最多 100 列表格
+  - 单段落最多 100,000 个 UTF-16 字符
 
-开发者需注意以下规范。
+## 常见问题
 
-### 1. 读写文件规范
+**Q: 为什么需要临时文件夹？**
 
-插件或者外部扩展如果有直接读取或者写入 data 下文件的需求，请通过调用内核 API 来实现，**不要自行调用 `fs` 或者其他 electron、nodejs API**，否则可能会导致数据同步时分块丢失，造成云端数据损坏。
+A: 飞书的导入 API 需要先上传文件，再进行转换。临时文件夹用于存放转换过程中的 Markdown 文件，转换完成后会自动清理。
 
-相关 API 见 `/api/file/*`（例如 `/api/file/getFile` 等）。
+**Q: 可以替换/更新已有的飞书文档吗？**
 
-### 2. Daily Note 属性规范
+A: 目前插件只支持创建新文档。替换/更新功能可能会在后续版本中添加。
 
-思源在创建日记的时候会自动为文档添加 custom-dailynote-yyyymmdd 属性，以方便将日记文档同普通文档区分。
+**Q: 转换超时怎么办？**
 
-> 详情请见 [Github Issue #9807](https://github.com/siyuan-note/siyuan/issues/9807)。
+A: 插件每 2 秒轮询一次转换状态，最多轮询 5 次（共 10 秒）。如果超时，会提示你手动前往飞书客户端确认结果。
 
-开发者在开发手动创建 Daily Note 的功能时请注意：
+**Q: 导出历史保存在哪里？**
 
-* 如果调用了 `/api/filetree/createDailyNote` 创建日记，那么文档会自动添加这个属性，无需开发者特别处理
-* 如果是开发者代码手动创建文档（例如使用 `createDocWithMd` API 创建日记），请手动为文档添加该属性
+A: 飞书文档的 token 保存在思源文档的自定义属性 `custom-feishu-doc-token` 中。
+
+## 许可证
+
+MIT
