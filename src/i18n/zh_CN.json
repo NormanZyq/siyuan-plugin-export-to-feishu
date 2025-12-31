@@ -21,6 +21,8 @@
   "tokenDescription": "访问 <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API 调试台</a> 快速获取一个临时的 user_access_token，有效期约 2 小时。粘贴时无需添加 Bearer 前缀。",
   "tokenPlaceholder": "请输入 access_token",
   "tokenRequired": "请先配置飞书 Token",
+  "tokenExpired": "Token 已过期",
+  "tokenExpiredDesc": "您的访问令牌已过期或无效，请重新获取。访问 <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API 调试台</a> 快速获取一个临时的 user_access_token，有效期约 2 小时。",
   "tempFolder": "临时文件上传目录",
   "tempFolderDescription": "用于上传 Markdown 临时文件的目录，转换完成后会自动删除",
   "tempFolderPlaceholder": "点击右侧按钮选择临时目录",

@@ -21,6 +21,8 @@
   "tokenDescription": "Visit <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API Explorer</a> to quickly get a temporary user_access_token (valid for ~2 hours). No need to add Bearer prefix when pasting.",
   "tokenPlaceholder": "Enter access_token",
   "tokenRequired": "Please configure Feishu Token first",
+  "tokenExpired": "Token Expired",
+  "tokenExpiredDesc": "Your access token has expired or is invalid. Visit <a href=\"https://open.feishu.cn/api-explorer/\" target=\"_blank\">API Explorer</a> to quickly get a temporary user_access_token (valid for ~2 hours).",
   "tempFolder": "Temporary Upload Folder",
   "tempFolderDescription": "Folder for uploading temporary Markdown files, will be auto-deleted after conversion",
   "tempFolderPlaceholder": "Click to select temporary folder",

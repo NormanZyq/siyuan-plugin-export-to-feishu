@@ -2,7 +2,7 @@
   "name": "export-to-feishu",
   "author": "Norman",
   "url": "https://github.com/NormanZyq/export-to-feishu",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "3.5.3",
   "backends": [
     "windows",

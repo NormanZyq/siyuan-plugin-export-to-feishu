@@ -12,6 +12,17 @@
     }
 }
 
+/* Token 过期对话框样式 */
+.feishu-token-expired-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--b3-theme-on-surface);
+
+    a {
+        color: var(--b3-theme-primary);
+    }
+}
+
 .feishu-folder-tree {
     max-height: 280px;
     overflow-y: auto;

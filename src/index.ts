@@ -109,11 +109,16 @@ export default class ExportToFeishuPlugin extends Plugin {
                 return;
             }
             this.config.tenantToken = tokenInput.value;
-            await this.showFolderSelector((token, name) => {
-                this.config.tempFolderToken = token;
-                this.config.tempFolderName = name;
-                tempFolderInput.value = name || token;
-            });
+            const result = await this.showFolderSelector();
+            // 如果 token 被更新（通过过期对话框），同步更新输入框
+            if (this.config.tenantToken !== tokenInput.value) {
+                tokenInput.value = this.config.tenantToken;
+            }
+            if (result) {
+                this.config.tempFolderToken = result.token;
+                this.config.tempFolderName = result.name;
+                tempFolderInput.value = result.name || result.token;
+            }
         });
 
         tempFolderContainer.appendChild(tempFolderInput);
@@ -153,9 +158,15 @@ export default class ExportToFeishuPlugin extends Plugin {
             return;
         }
 
+        // 检查临时目录配置，如果没有则弹出选择框
         if (!this.config.tempFolderToken) {
-            showMessage(this.i18n.tempFolderRequired, 3000, "error");
-            return;
+            const tempFolder = await this.showFolderSelector(this.i18n.tempFolder);
+            if (!tempFolder) {
+                return; // 用户取消选择
+            }
+            this.config.tempFolderToken = tempFolder.token;
+            this.config.tempFolderName = tempFolder.name;
+            await this.saveData(STORAGE_NAME, this.config);
         }
 
         // 通过 DOM 查找当前激活的编辑器
@@ -572,61 +583,129 @@ export default class ExportToFeishuPlugin extends Plugin {
         });
     }
 
-    private async showFolderSelector(onSelect: (token: string, name: string) => void) {
+    private async showFolderSelector(title?: string): Promise<{ token: string; name: string } | null> {
         const rootFolder = await this.getRootFolder();
         if (!rootFolder) {
             showMessage(this.i18n.getRootFolderFailed, 3000, "error");
-            return;
+            return null;
         }
 
-        const dialog = new Dialog({
-            title: this.i18n.selectFolder,
-            content: `<div class="b3-dialog__content">
-                <div class="feishu-folder-tree" id="feishuFolderTree">
-                    <div class="fn__loading"><img src="/stage/loading-pure.svg"></div>
+        return new Promise((resolve) => {
+            const dialog = new Dialog({
+                title: title || this.i18n.selectFolder,
+                content: `<div class="b3-dialog__content">
+                    <div class="feishu-folder-tree" id="feishuFolderTree">
+                        <div class="fn__loading"><img src="/stage/loading-pure.svg"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="b3-dialog__action">
-                <button class="b3-button b3-button--cancel">${this.i18n.cancel}</button>
-                <div class="fn__space"></div>
-                <button class="b3-button b3-button--text" id="confirmFolderBtn" disabled>${this.i18n.confirm}</button>
-            </div>`,
-            width: "520px",
-            height: "400px",
-        });
+                <div class="b3-dialog__action">
+                    <button class="b3-button b3-button--cancel">${this.i18n.cancel}</button>
+                    <div class="fn__space"></div>
+                    <button class="b3-button b3-button--text" id="confirmFolderBtn" disabled>${this.i18n.confirm}</button>
+                </div>`,
+                width: "520px",
+                height: "400px",
+            });
 
-        const treeContainer = dialog.element.querySelector("#feishuFolderTree") as HTMLElement;
-        const confirmBtn = dialog.element.querySelector("#confirmFolderBtn") as HTMLButtonElement;
-        const cancelBtn = dialog.element.querySelector(".b3-button--cancel") as HTMLButtonElement;
+            const treeContainer = dialog.element.querySelector("#feishuFolderTree") as HTMLElement;
+            const confirmBtn = dialog.element.querySelector("#confirmFolderBtn") as HTMLButtonElement;
+            const cancelBtn = dialog.element.querySelector(".b3-button--cancel") as HTMLButtonElement;
 
-        let selectedToken = "";
-        let selectedName = "";
+            let selectedToken = "";
+            let selectedName = "";
 
-        cancelBtn.addEventListener("click", () => dialog.destroy());
-        confirmBtn.addEventListener("click", () => {
-            if (selectedToken) {
-                onSelect(selectedToken, selectedName);
+            cancelBtn.addEventListener("click", () => {
                 dialog.destroy();
-            }
-        });
+                resolve(null);
+            });
 
-        await this.loadFolderTree(treeContainer, rootFolder.token, rootFolder.name || this.i18n.mySpace, (token, name) => {
-            selectedToken = token;
-            selectedName = name;
-            confirmBtn.disabled = false;
+            confirmBtn.addEventListener("click", () => {
+                if (selectedToken) {
+                    dialog.destroy();
+                    resolve({ token: selectedToken, name: selectedName });
+                }
+            });
+
+            this.loadFolderTree(treeContainer, rootFolder.token, rootFolder.name || this.i18n.mySpace, (token, name) => {
+                selectedToken = token;
+                selectedName = name;
+                confirmBtn.disabled = false;
+            });
+        });
+    }
+
+    private async showTokenExpiredDialog(): Promise<boolean> {
+        return new Promise((resolve) => {
+            const dialog = new Dialog({
+                title: this.i18n.tokenExpired,
+                content: `<div class="b3-dialog__content">
+                    <div class="feishu-token-expired-desc">${this.i18n.tokenExpiredDesc}</div>
+                    <div class="fn__hr"></div>
+                    <input type="password" class="b3-text-field fn__block" id="newTokenInput" placeholder="${this.i18n.tokenPlaceholder}">
+                </div>
+                <div class="b3-dialog__action">
+                    <button class="b3-button b3-button--cancel">${this.i18n.cancel}</button>
+                    <div class="fn__space"></div>
+                    <button class="b3-button b3-button--text" id="confirmTokenBtn" disabled>${this.i18n.confirm}</button>
+                </div>`,
+                width: "420px",
+            });
+
+            const tokenInput = dialog.element.querySelector("#newTokenInput") as HTMLInputElement;
+            const confirmBtn = dialog.element.querySelector("#confirmTokenBtn") as HTMLButtonElement;
+            const cancelBtn = dialog.element.querySelector(".b3-button--cancel") as HTMLButtonElement;
+
+            tokenInput.addEventListener("input", () => {
+                confirmBtn.disabled = !tokenInput.value.trim();
+            });
+
+            cancelBtn.addEventListener("click", () => {
+                dialog.destroy();
+                resolve(false);
+            });
+
+            confirmBtn.addEventListener("click", async () => {
+                const newToken = tokenInput.value.trim();
+                if (newToken) {
+                    this.config.tenantToken = newToken;
+                    await this.saveData(STORAGE_NAME, this.config);
+                    dialog.destroy();
+                    resolve(true);
+                }
+            });
+
+            // 自动聚焦输入框
+            setTimeout(() => tokenInput.focus(), 100);
         });
     }
 
     private async getRootFolder(): Promise<{ token: string; name?: string } | null> {
-        try {
+        // Token 过期相关错误码
+        const TOKEN_ERROR_CODES = [99991663, 99991664, 99991661, 99991668];
+
+        const fetchRootFolder = async (): Promise<{ code: number; data?: { token: string }; msg?: string }> => {
             const response = await fetch("https://open.feishu.cn/open-apis/drive/explorer/v2/root_folder/meta", {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${this.config.tenantToken}`,
                 },
             });
+            return response.json();
+        };
 
-            const result = await response.json();
+        try {
+            let result = await fetchRootFolder();
+
+            // 检测 token 过期
+            if (TOKEN_ERROR_CODES.includes(result.code)) {
+                const tokenUpdated = await this.showTokenExpiredDialog();
+                if (!tokenUpdated) {
+                    return null; // 用户取消
+                }
+                // 使用新 token 重试
+                result = await fetchRootFolder();
+            }
+
             if (result.code === 0 && result.data?.token) {
                 return { token: result.data.token };
             }
